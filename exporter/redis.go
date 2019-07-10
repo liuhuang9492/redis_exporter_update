@@ -62,6 +62,9 @@ type scrapeResult struct {
 
 var (
 	metricMap = map[string]string{
+                // # Baseinfo
+                "redis_current_version":    "redis_version",
+  
 		// # Server
 		"uptime_in_seconds": "uptime_in_seconds",
 		"process_id":        "process_id",
@@ -82,6 +85,7 @@ var (
 		"used_memory_lua":     "memory_used_lua_bytes",
 		"total_system_memory": "total_system_memory_bytes",
 		"maxmemory":           "memory_max_bytes",
+                "mem_fragmentation_ratio":  "mem_fragmentation_ratio",
 
 		// # Persistence
 		"rdb_changes_since_last_save":  "rdb_changes_since_last_save",
@@ -123,6 +127,9 @@ var (
 		"pubsub_channels":            "pubsub_channels",
 		"pubsub_patterns":            "pubsub_patterns",
 		"latest_fork_usec":           "latest_fork_usec",
+                "sync_full":                  "sync_full",
+                "sync_partial_ok":            "sync_partial_ok",
+                "sync_partial_err":           "sync_partial_err",
 
 		// # Replication
 		"loading":                    "loading_dump_file",
@@ -130,6 +137,9 @@ var (
 		"repl_backlog_size":          "replication_backlog_bytes",
 		"master_last_io_seconds_ago": "master_last_io_seconds",
 		"master_repl_offset":         "master_repl_offset",
+                "repl_backlog_active":        "repl_backlog_active",
+                "repl_backlog_first_byte_offset":  "repl_backlog_first_byte_offset",
+                "repl_backlog_histlen":            "repl_backlog_histlen",
 
 		// # CPU
 		"used_cpu_sys":           "used_cpu_sys",
@@ -162,7 +172,7 @@ var (
 		"version":         "version", // since tile38 version 1.14.1
 	}
 
-	instanceInfoFields = map[string]bool{"role": true, "redis_version": true, "redis_build_id": true, "redis_mode": true, "os": true}
+	instanceInfoFields = map[string]bool{"role": true, "redis_version": true, "redis_build_id": true, "redis_mode": true, "os": true, "maxmemory_policy": true, "mem_allocator": true}
 	slaveInfoFields    = map[string]bool{"master_host": true, "master_port": true, "slave_read_only": true}
 )
 
@@ -173,7 +183,7 @@ func (e *Exporter) initGauges() {
 		Namespace: e.namespace,
 		Name:      "instance_info",
 		Help:      "Information about the Redis instance",
-	}, []string{"addr", "alias", "role", "redis_version", "redis_build_id", "redis_mode", "os"})
+	}, []string{"addr", "alias", "role", "redis_version", "redis_build_id", "redis_mode", "os", "maxmemory_policy", "mem_allocator"})
 	e.metrics["slave_info"] = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: e.namespace,
 		Name:      "slave_info",
@@ -691,6 +701,8 @@ func (e *Exporter) extractInfoMetrics(info, addr string, alias string, scrapes c
 		instanceInfo["redis_build_id"],
 		instanceInfo["redis_mode"],
 		instanceInfo["os"],
+		instanceInfo["maxmemory_policy"],
+		instanceInfo["mem_allocator"],
 	).Set(1)
 	if instanceInfo["role"] == "slave" {
 		e.metrics["slave_info"].WithLabelValues(
